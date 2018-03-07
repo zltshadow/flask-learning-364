@@ -66,6 +66,7 @@ def internal_server_error(e):
 def index():
     form = NameForm()
     if form.validate_on_submit():
+        #使用filter_by()查询过滤器从数据库中查找提交的名字
         user = User.query.filter_by(username=form.name.data).first()
         if user == None:
             user = User(username=form.name.data)
@@ -77,6 +78,7 @@ def index():
         session['name'] = form.name.data
         form.name.data = ''
         return redirect(url_for('index'))
+    #变量known被写入用户对话中，可以将数据传给模板，从而实现显示自定义的欢迎消息的功能
     return render_template('index.html', form=form, name=session.get('name'), known=session.get('known', False))
 
 if __name__=='__main__':
