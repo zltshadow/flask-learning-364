@@ -1,48 +1,83 @@
+import os
 from flask import Flask, render_template, session, redirect, url_for, flash
-#初始化，创建Flask类对象，也就是程序实例
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'hard to guess string'
-
-from flask.ext.bootstrap import Bootstrap
-#从flask.ext命名空间导入Flask-Bootstrap，然后将程序实例传入构造方法进行初始化
-bootstrap = Bootstrap(app)
-
+from flask_bootstrap import Bootstrap
 from flask_moment import Moment
-#从flask_moment命名空间导入Flask-Moment，3.6.4版本用flask.ext会有警告，将程序实例传入构造方法进行初始化
-moment = Moment(app)
-
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
-from wtforms.validators import Required
+from wtforms.validators import DataRequired
+from flask_sqlalchemy import SQLAlchemy
 
-class NameForm(Form):
-	name = StringField('What is your name?', validators=[Required()])
-	submit = SubmitField('submit')
+#数据库文件地址
+basedir = os.path.abspath(os.path.dirname(__file__))
 
-from datetime import datetime
+#初始化程序实例
+app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-	form = NameForm()
-	if form.validate_on_submit():
-		old_name = session.get('name')
-		if old_name is not None and old_name != form.name.data:
-			flash('Looks like you have changed your name!')
-		session['name'] = form.name.data
-		return redirect(url_for('index'))
-	return render_template("index.html", form=form, name=session.get('name'))
+#config字典，存储密钥（CSRF保护）,数据库URL，自动提交事务
+app.config['SECRET_KEY'] = 'hard to guess string'
+app.config['SQLALCHEMY_DATABASE_URI'] =\
+    'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-@app.route('/user/<name>')
-def user(name):
-	return render_template('user.html', name=name)
+#将程序实例传入构造方法进行初始化
+bootstrap = Bootstrap(app)
+moment = Moment(app)
+db = SQLAlchemy(app)
+
+#定义Role和User模型
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    #Role与User模型的关系
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+
+#定义表单类，包含一个文本字段和一个提交按钮
+class NameForm(FlaskForm):
+    name = StringField('What is your name?', validators=[DataRequired()])
+    submit = SubmitField('Submit')
+
 
 @app.errorhandler(404)
 def page_not_found(e):
-	return render_template('404.html'), 404
+    return render_template('404.html'), 404
+
 
 @app.errorhandler(500)
 def internal_server_error(e):
-	return render_template('500.html'), 500
+    return render_template('500.html'), 500
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    form = NameForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.name.data).first()
+        if user == None:
+            user = User(username=form.name.data)
+            db.session.add(user)
+            db.session.commit()
+            session['known'] = False
+        else:
+            session['known'] = True
+        session['name'] = form.name.data
+        form.name.data = ''
+        return redirect(url_for('index'))
+    return render_template('index.html', form=form, name=session.get('name'), known=session.get('known', False))
 
 if __name__=='__main__':
-	app.run()
+    app.run()
