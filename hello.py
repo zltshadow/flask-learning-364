@@ -10,7 +10,7 @@ from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from threading import Thread
 
-#1.打开git bash，2.再git中设置用户名 3.在git中设置提交电子邮件地址
+#github设置：1.打开git bash，2.在git中设置用户名 3.在git中设置提交电子邮件地址
 
 #数据库文件地址
 basedir = os.path.abspath(os.path.dirname(__file__))
