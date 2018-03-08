@@ -20,6 +20,7 @@ class User(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     #为了创建迁移脚本，增加school字段
     school = db.Column(db.String(64), unique=True, index=True)
+    
 
     def __repr__(self):
         return '<User %r>' % self.username

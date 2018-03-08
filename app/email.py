@@ -4,7 +4,7 @@ from flask_mail import Message
 from . import mail
 
 
-#异步发送电子邮件邮件
+#异步发送电子邮件函数
 def send_async_email(app, msg):
     with app.app_context():
         mail.send(msg)
@@ -16,6 +16,7 @@ def send_eamil(to, subject, template, **kwargs):
                   sender = app.config['FLASKLEARNING_MAIL_SENDER'], recipients=[to])
     msg.body = render_template(template + '.txt', **kwargs)
     msg.html = render_template(template + '.html', **kwargs)
+    #开始异步发送电邮线程
     thr = Thread(target=send_async_email, args=[app, msg])
     thr.start()
     return thr

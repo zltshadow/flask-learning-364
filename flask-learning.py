@@ -1,6 +1,6 @@
+#这个版本是没有MigrateCommand，且利用的是shell_context_processor而不是scripts的shell模块！
 import os
-from flask_migrate import Migrate, MigrateCommand
-
+from flask_migrate import Migrate
 from app import create_app, db
 from app.models import User, Role
 
