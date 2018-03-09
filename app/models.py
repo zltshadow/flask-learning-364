@@ -1,5 +1,6 @@
-from . import db
+from . import db, login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 #定义Role和User模型
 class Role(db.Model):
@@ -9,13 +10,15 @@ class Role(db.Model):
     #Role与User模型的关系
     users = db.relationship('User', backref='role', lazy='dynamic')
 
+    #返回一个具有可读性的字符串表示模型，可在调试和测试时使用
     def __repr__(self):
         return '<Role %r>' % self.name
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(64), unique=True, index=True)
     username = db.Column(db.String(64), unique=True, index=True)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     #为了创建迁移脚本，增加school字段
@@ -23,10 +26,12 @@ class User(db.Model):
     #在User模型中加入密码散列
     password_hash = db.Column(db.String(128))
 
+    #设置password为只写属性
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute')
 
+    #password建立修饰器，包含生成pass_hash以及验证密码散列函数
     @password.setter
     def password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -36,3 +41,8 @@ class User(db.Model):
     
     def __repr__(self):
         return '<User %r>' % self.username
+
+#用户回调函数，以user_id加载用户，若找到用户，则返回用户对象，否则返回None
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
