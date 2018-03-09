@@ -8,6 +8,7 @@ class Config:
     #主题，发件人，从环境变量导入管理员邮箱地址
     FLASKLEARNING_MAIL_SUBJECT_PREFIX = '[FLASKLEARNING]'
     FLASKLEARNING_MAIL_SENDER = 'FLASKLEARNING ADMIN <zlt_shadow@163.com>'
+    #在命令行输入网站管理员邮箱FLASKLEARNING_ADMIN，我这默认为1393609636@qq.com
     FLASKLEARNING_ADMIN = os.environ.get('FLASKLEARNING_ADMIN')
 
     @staticmethod
@@ -20,8 +21,10 @@ class DevelopmentConfig(Config):
     MAIL_SERVER = 'smtp.163.com'
     MAIL_PORT = 25
     MAIL_USE_TLS = True
+    #在命令行输入发送邮箱MAIL_USERNAME和MAIL_PASSWORD(授权码)，我这默认为zlt_shadow@163.com
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    #数据库URI，若不在环境变量设置会使用默认的'data-dev.sqlite'数据库
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
 

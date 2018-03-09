@@ -29,7 +29,7 @@ def create_app(config_name):
     moment.init_app(app)
     db.init_app(app)
 
-    #使用蓝本附加路由和自定义错误页面
+    #使用蓝本附加路由和自定义错误页面，两步，1.从蓝本命名空间导入蓝本，2.将蓝本注册到程序上
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
