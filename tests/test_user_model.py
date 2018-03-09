@@ -1,5 +1,7 @@
-#密码散列化测试
+#单元测试
 import unittest
+import time
+from app import create_app, db
 from app.models import User
 
 
@@ -29,7 +31,7 @@ class UserModelTestCase(unittest.TestCase):
             u.password
 
     #测试verify函数
-    def test_password_verify(self):
+    def test_password_verification(self):
         u = User(password = '123456')
         self.assertTrue(u.verify_password('123456'))
         self.assertFalse(u.verify_password('12345678'))
@@ -39,3 +41,27 @@ class UserModelTestCase(unittest.TestCase):
         u1 = User(password = '123456')
         u2 = User(password = '123456')
         self.assertFalse(u1.password_hash == u2.password_hash)
+
+    def test_valid_confirmation_token(self):
+        u = User(password='123456')
+        db.session.add(u)
+        db.session.commit()
+        token = u.generate_confirmation_token()
+        self.assertTrue(u.confirm(token))
+
+    def test_invalid_confirmation_token(self):
+        u1 = User(password='123456')
+        u2 = User(password='12345')
+        db.session.add(u1)
+        db.session.add(u2)
+        db.session.commit()
+        token = u1.generate_confirmation_token()
+        self.assertFalse(u2.confirm(token))
+
+    def test_expired_confirmation_token(self):
+        u = User(password='123456')
+        db.session.add(u)
+        db.session.commit()
+        token = u.generate_confirmation_token(1)
+        time.sleep(2)
+        self.assertFalse(u.confirm(token))
