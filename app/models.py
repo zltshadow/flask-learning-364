@@ -35,11 +35,12 @@ class User(UserMixin, db.Model):
     def password(self):
         raise AttributeError('password is not a readable attribute')
 
-    #password建立修饰器，包含生成pass_hash以及验证密码散列函数
+    #password建立修饰器，生成pass_hash
     @password.setter
     def password(self, password):
         self.password_hash = generate_password_hash(password)
 
+    #验证密码散列函数
     def verify_password(self, password):
             return check_password_hash(self.password_hash, password)
     
@@ -47,7 +48,7 @@ class User(UserMixin, db.Model):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'confirm': self.id}).decode('utf-8')
 
-    def confirm(self, tokem):
+    def confirm(self, token):
         s = Serializer(current_app.config['SECRET_KEY'])
         try:
             data = s.loads(token.encode('utf-8'))
