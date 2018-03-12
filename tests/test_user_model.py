@@ -1,57 +1,51 @@
-#单元测试
 import unittest
 import time
 from app import create_app, db
-from app.models import User
+from app.models import User, AnonymousUser, Role, Permission
 
 
 class UserModelTestCase(unittest.TestCase):
-    #创建测试环境，确保能在测试中使用current_app，生成一个全新的数据库以备不时之需
     def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
+        Role.insert_roles()
 
-    #删除创建的数据库的程序上下文
     def tearDown(self):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
 
-    #确保u.password_hash实例存在    
     def test_password_setter(self):
-        u = User(password = '123456')
+        u = User(password='cat')
         self.assertTrue(u.password_hash is not None)
 
-    #确保password是只写属性
     def test_no_password_getter(self):
-        u = User(password = '123456')
+        u = User(password='cat')
         with self.assertRaises(AttributeError):
             u.password
 
-    #测试verify函数
     def test_password_verification(self):
-        u = User(password = '123456')
-        self.assertTrue(u.verify_password('123456'))
-        self.assertFalse(u.verify_password('12345678'))
+        u = User(password='cat')
+        self.assertTrue(u.verify_password('cat'))
+        self.assertFalse(u.verify_password('dog'))
 
-    #测试同一密码生成的不同序列是否一样（也就是看salts是不是随机的）
     def test_password_salts_are_random(self):
-        u1 = User(password = '123456')
-        u2 = User(password = '123456')
-        self.assertFalse(u1.password_hash == u2.password_hash)
+        u = User(password='cat')
+        u2 = User(password='cat')
+        self.assertTrue(u.password_hash != u2.password_hash)
 
     def test_valid_confirmation_token(self):
-        u = User(password='123456')
+        u = User(password='cat')
         db.session.add(u)
         db.session.commit()
         token = u.generate_confirmation_token()
         self.assertTrue(u.confirm(token))
 
     def test_invalid_confirmation_token(self):
-        u1 = User(password='123456')
-        u2 = User(password='12345')
+        u1 = User(password='cat')
+        u2 = User(password='dog')
         db.session.add(u1)
         db.session.add(u2)
         db.session.commit()
@@ -59,7 +53,7 @@ class UserModelTestCase(unittest.TestCase):
         self.assertFalse(u2.confirm(token))
 
     def test_expired_confirmation_token(self):
-        u = User(password='123456')
+        u = User(password='cat')
         db.session.add(u)
         db.session.commit()
         token = u.generate_confirmation_token(1)
@@ -67,20 +61,20 @@ class UserModelTestCase(unittest.TestCase):
         self.assertFalse(u.confirm(token))
 
     def test_valid_reset_token(self):
-        u = User(password='123456')
+        u = User(password='cat')
         db.session.add(u)
         db.session.commit()
         token = u.generate_reset_token()
-        self.assertTrue(User.reset_password(token, '960101'))
-        self.assertTrue(u.verify_password('960101'))
+        self.assertTrue(User.reset_password(token, 'dog'))
+        self.assertTrue(u.verify_password('dog'))
 
     def test_invalid_reset_token(self):
-        u = User(password='123456')
+        u = User(password='cat')
         db.session.add(u)
         db.session.commit()
         token = u.generate_reset_token()
-        self.assertFalse(User.reset_password(token + 'a', '960101'))
-        self.assertTrue(u.verify_password('123456'))
+        self.assertFalse(User.reset_password(token + 'a', 'horse'))
+        self.assertTrue(u.verify_password('cat'))
 
     def test_valid_change_email_token(self):
         u = User(email='john@example.com', password='cat')
@@ -89,7 +83,7 @@ class UserModelTestCase(unittest.TestCase):
         token = u.generate_change_email_token('susan@example.org')
         self.assertTrue(u.change_email(token))
         self.assertTrue(u.email == 'susan@example.org')
-        
+
     def test_invalid_change_email_token(self):
         u1 = User(email='john@example.com', password='cat')
         u2 = User(email='susan@example.org', password='dog')
@@ -109,3 +103,37 @@ class UserModelTestCase(unittest.TestCase):
         token = u2.generate_change_email_token('john@example.com')
         self.assertFalse(u2.change_email(token))
         self.assertTrue(u2.email == 'susan@example.org')
+
+    def test_user_role(self):
+        u = User(email='john@example.com', password='cat')
+        self.assertTrue(u.can(Permission.FOLLOW))
+        self.assertTrue(u.can(Permission.COMMENT))
+        self.assertTrue(u.can(Permission.WRITE))
+        self.assertFalse(u.can(Permission.MODERATE))
+        self.assertFalse(u.can(Permission.ADMIN))
+
+    def test_moderator_role(self):
+        r = Role.query.filter_by(name='Moderator').first()
+        u = User(email='john@example.com', password='cat', role=r)
+        self.assertTrue(u.can(Permission.FOLLOW))
+        self.assertTrue(u.can(Permission.COMMENT))
+        self.assertTrue(u.can(Permission.WRITE))
+        self.assertTrue(u.can(Permission.MODERATE))
+        self.assertFalse(u.can(Permission.ADMIN))
+
+    def test_administrator_role(self):
+        r = Role.query.filter_by(name='Administrator').first()
+        u = User(email='john@example.com', password='cat', role=r)
+        self.assertTrue(u.can(Permission.FOLLOW))
+        self.assertTrue(u.can(Permission.COMMENT))
+        self.assertTrue(u.can(Permission.WRITE))
+        self.assertTrue(u.can(Permission.MODERATE))
+        self.assertTrue(u.can(Permission.ADMIN))
+
+    def test_anonymous_user(self):
+        u = AnonymousUser()
+        self.assertFalse(u.can(Permission.FOLLOW))
+        self.assertFalse(u.can(Permission.COMMENT))
+        self.assertFalse(u.can(Permission.WRITE))
+        self.assertFalse(u.can(Permission.MODERATE))
+        self.assertFalse(u.can(Permission.ADMIN))
