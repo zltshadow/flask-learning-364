@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 from flask import current_app
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from datetime import datetime
 
 
 class Permission:
@@ -11,6 +12,7 @@ class Permission:
     WRITE = 4
     MODERATE = 8
     ADMIN = 16
+
 
 #定义Role和User模型
 class Role(db.Model):
@@ -80,6 +82,12 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     #增加confirmed字段
     confirmed = db.Column(db.Boolean, default=False)
+    #增加用户信息字段
+    name = db.Column(db.String(64))
+    location = db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -169,6 +177,10 @@ class User(UserMixin, db.Model):
     def is_administrator(self):
         return self.can(Permission.ADMIN)
 
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
+        
     def __repr__(self):
         return '<User %r>' % self.username
 
@@ -181,6 +193,7 @@ class AnonymousUser(AnonymousUserMixin):
         return False
 
 login_manager.anonymous_user = AnonymousUser
+
 
 #用户回调函数，以user_id加载用户，若找到用户，则返回用户对象，否则返回None
 @login_manager.user_loader
