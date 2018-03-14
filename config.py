@@ -10,6 +10,8 @@ class Config:
     FLASKLEARNING_MAIL_SENDER = 'FLASKLEARNING ADMIN <zlt_shadow@163.com>'
     #在命令行输入网站管理员邮箱FLASKLEARNING_ADMIN，我这默认为1393609636@qq.com
     FLASKLEARNING_ADMIN = os.environ.get('FLASKLEARNING_ADMIN')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    FLASKLEARNING_POSTS_PER_PAGE = 5
 
     @staticmethod
     def init_app(app):
